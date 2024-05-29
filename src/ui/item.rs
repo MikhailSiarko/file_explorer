@@ -1,14 +1,35 @@
 use std::path::PathBuf;
 
 use iced::{
-    widget::{mouse_area, text},
-    Element,
+    widget::{mouse_area, row, svg, text, Svg},
+    Element, Length, Theme,
 };
 
 use crate::Message;
 
+use super::styles::SvgStyles;
+
 pub fn view(path_buf: &PathBuf) -> Element<Message> {
-    mouse_area(text(path_buf.file_name().unwrap().to_str().unwrap()))
+    let container = row!(
+        get_icon(&path_buf).width(Length::FillPortion(1)),
+        text(path_buf.file_name().unwrap().to_str().unwrap()).width(Length::FillPortion(9)),
+    )
+    .align_items(iced::Alignment::Start)
+    .height(25)
+    .width(500);
+    mouse_area(container)
         .on_press(Message::Next(path_buf.display().to_string()))
         .into()
+}
+
+fn get_icon(path_buf: &PathBuf) -> Svg<Theme> {
+    if path_buf.is_dir() {
+        let dir_icon_handle =
+            svg::Handle::from_memory(include_bytes!("../../resources/folder-open.svg"));
+        svg(dir_icon_handle).style(SvgStyles::themed())
+    } else {
+        let file_icon_handle =
+            svg::Handle::from_memory(include_bytes!("../../resources/paper.svg"));
+        svg(file_icon_handle).style(SvgStyles::themed())
+    }
 }

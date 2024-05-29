@@ -1,31 +1,34 @@
 use iced::{
-    widget::{button, container, row, svg},
+    widget::{button, container, row, svg, tooltip},
     Element, Length,
 };
 
 use crate::Message;
 
-pub fn view(has_parent_dir: bool) -> Element<'static, Message> {
-    let home_icon_handle = svg::Handle::from_path(format!(
-        "{}/resources/people.svg",
-        env!("CARGO_MANIFEST_DIR")
-    ));
+use super::styles::SvgStyles;
 
-    let home = button(svg(home_icon_handle))
-        .width(50)
-        .height(25)
-        .on_press(Message::Home);
+pub fn view(has_parent_dir: bool) -> Element<'static, Message> {
+    let home_icon_handle = svg::Handle::from_memory(include_bytes!("../../resources/people.svg"));
+
+    let home = tooltip(
+        button(svg(home_icon_handle).style(SvgStyles::light()))
+            .width(50)
+            .height(25)
+            .on_press(Message::Home),
+        "Home",
+        tooltip::Position::FollowCursor,
+    );
     let back = if has_parent_dir {
-        let back_icon_handle = svg::Handle::from_path(format!(
-            "{}/resources/left-large.svg",
-            env!("CARGO_MANIFEST_DIR")
-        ));
-        Some(
-            button(svg(back_icon_handle))
+        let back_icon_handle =
+            svg::Handle::from_memory(include_bytes!("../../resources/left-large.svg"));
+        Some(tooltip(
+            button(svg(back_icon_handle).style(SvgStyles::light()))
                 .width(50)
                 .height(25)
                 .on_press(Message::Back),
-        )
+            "Back",
+            tooltip::Position::FollowCursor,
+        ))
     } else {
         None
     };
@@ -34,8 +37,11 @@ pub fn view(has_parent_dir: bool) -> Element<'static, Message> {
         row!()
             .push_maybe(back)
             .push(home)
-            .height(Length::FillPortion(1)),
+            .align_items(iced::Alignment::Center)
+            .width(Length::Fill)
+            .spacing(10)
+            .height(Length::Shrink),
     )
-    .padding(10)
+    .padding(5)
     .into()
 }

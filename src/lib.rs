@@ -4,7 +4,7 @@ use ui::{item, top_panel};
 
 use iced::{
     executor,
-    widget::{column, container, scrollable, Column},
+    widget::{column, scrollable, Column},
     Alignment, Application, Command, Element, Length, Padding, Theme,
 };
 use std::{
@@ -120,14 +120,15 @@ impl Application for App {
     fn view(&self) -> Element<'_, Self::Message> {
         let items: Vec<Element<_>> = self.items().into_iter().map(|i| item::view(i)).collect();
 
-        let explorer = container(
-            scrollable(Column::from_vec(items).padding(Padding::new(20.0))).width(Length::Fill),
+        let explorer = scrollable(
+            Column::from_vec(items)
+                .padding(Padding::new(20.0))
+                .align_items(Alignment::Start),
         )
         .width(Length::Fill)
         .height(Length::FillPortion(5));
 
         column!(top_panel::view(self.parent_dir.is_some()), explorer)
-            .align_items(Alignment::Center)
             .height(Length::Fill)
             .width(Length::Fill)
             .into()
