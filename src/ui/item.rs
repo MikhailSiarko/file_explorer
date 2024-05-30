@@ -17,9 +17,12 @@ pub fn view(path_buf: &PathBuf) -> Element<Message> {
     .align_items(iced::Alignment::Start)
     .height(25)
     .width(500);
-    mouse_area(container)
-        .on_press(Message::Next(path_buf.display().to_string()))
-        .into()
+    let message = if path_buf.is_file() {
+        Message::OpenFile(path_buf.display().to_string())
+    } else {
+        Message::Next(path_buf.display().to_string())
+    };
+    mouse_area(container).on_press(message).into()
 }
 
 fn get_icon(path_buf: &PathBuf) -> Svg<Theme> {

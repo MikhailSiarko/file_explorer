@@ -23,6 +23,7 @@ pub enum Message {
     Back,
     Home,
     Load(Result<(String, Option<String>, Vec<PathBuf>), Error>),
+    OpenFile(String),
 }
 
 pub struct App {
@@ -106,6 +107,13 @@ impl Application for App {
                 println!("Error occured: [{:?}]", kind);
                 Command::none()
             }
+            Message::OpenFile(path) => match open::that(path) {
+                Ok(_) => Command::none(),
+                Err(error) => {
+                    println!("Error occured: [{:?}]", error.kind());
+                    Command::none()
+                }
+            },
         }
     }
 
