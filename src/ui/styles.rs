@@ -1,6 +1,10 @@
-use iced::{theme, widget::svg, Color, Theme};
+use iced::{widget::svg, Color, Theme};
 
-pub struct SvgStyles;
+pub enum SvgStyles {
+    Themed,
+    Light,
+    Dark,
+}
 
 impl SvgStyles {
     fn from_theme(theme: &Theme) -> svg::Appearance {
@@ -26,18 +30,37 @@ impl SvgStyles {
         }
     }
 
-    pub fn themed() -> theme::Svg {
-        theme::Svg::custom_fn(SvgStyles::from_theme)
-    }
-
-    pub fn light() -> theme::Svg {
-        theme::Svg::custom_fn(|_| svg::Appearance {
+    fn light() -> svg::Appearance {
+        svg::Appearance {
             color: Some(Color {
                 r: 255.0,
                 g: 255.0,
                 b: 255.0,
                 a: 0.9,
             }),
-        })
+        }
+    }
+
+    fn dark() -> svg::Appearance {
+        svg::Appearance {
+            color: Some(Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 0.5,
+            }),
+        }
+    }
+}
+
+impl svg::StyleSheet for SvgStyles {
+    type Style = iced::Theme;
+
+    fn appearance(&self, style: &Self::Style) -> svg::Appearance {
+        match self {
+            SvgStyles::Themed => Self::from_theme(style),
+            SvgStyles::Light => Self::light(),
+            SvgStyles::Dark => Self::dark(),
+        }
     }
 }

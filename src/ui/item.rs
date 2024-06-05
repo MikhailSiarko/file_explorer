@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use iced::{
+    theme,
     widget::{mouse_area, row, svg, text, Svg},
     Element, Length, Theme,
 };
@@ -29,10 +30,10 @@ fn get_icon(path_buf: &PathBuf) -> Svg<Theme> {
     if path_buf.is_dir() {
         let dir_icon_handle =
             svg::Handle::from_memory(include_bytes!("../../resources/folder-open.svg"));
-        svg(dir_icon_handle).style(SvgStyles::themed())
+        svg(dir_icon_handle).style(theme::Svg::Custom(Box::new(SvgStyles::Themed)))
     } else {
         let file_icon_handle =
             svg::Handle::from_memory(include_bytes!("../../resources/paper.svg"));
-        svg(file_icon_handle).style(SvgStyles::themed())
+        svg(file_icon_handle).style(theme::Svg::Custom(Box::new(SvgStyles::Themed)))
     }
 }
