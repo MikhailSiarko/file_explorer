@@ -24,13 +24,40 @@ pub enum Message {
     Home,
     Load(Result<(String, Option<String>, Vec<PathBuf>), Error>),
     OpenFile(String),
+    ShowHidden(bool),
 }
 
 pub struct App {
     home_dir: &'static str,
+    show_hidden_items: bool,
     items: Vec<PathBuf>,
     parent_dir: Option<String>,
     current_dir: String,
+}
+
+#[cfg(unix)]
+fn is_hidden(path_buf: &PathBuf) -> bool {
+    use std::os::unix::ffi::OsStrExt;
+
+    path_buf
+        .file_name()
+        .map_or(false, |file_name| file_name.as_bytes()[0] == b'.')
+}
+
+#[cfg(windows)]
+fn is_hidden(path_buf: &PathBuf) -> bool {
+    use std::os::windows::prelude::*;
+
+    match std::fs::metadata(path_buf) {
+        Ok(metadata) => {
+            let attributes = metadata.file_attributes();
+            if (attributes & 0x2) {
+                true
+            }
+            false
+        }
+        Err(err) => println!("Error occured: [{:?}]", err.kind()),
+    }
 }
 
 async fn load_items(current_dir: String) -> Result<(String, Option<String>, Vec<PathBuf>), Error> {
@@ -81,6 +108,7 @@ impl Application for App {
         let home_dir = env!("HOME");
         let app = App {
             home_dir,
+            show_hidden_items: false,
             items: Vec::new(),
             parent_dir: parent(&home_dir.to_string()),
             current_dir: String::from(home_dir),
@@ -101,6 +129,10 @@ impl Application for App {
             Message::Home => Command::perform(load_items(self.home_dir.to_string()), Message::Load),
             Message::Load(Ok((current_dir, parent_dir, mut items))) => {
                 self.update_data(current_dir, parent_dir, &mut items);
+                Command::none()
+            }
+            Message::ShowHidden(show_hidden_items) => {
+                self.show_hidden_items = show_hidden_items;
                 Command::none()
             }
             Message::Load(Err(kind)) => {
@@ -126,7 +158,12 @@ impl Application for App {
     }
 
     fn view(&self) -> Element<'_, Self::Message> {
-        let items: Vec<Element<_>> = self.items().into_iter().map(|i| item::view(i)).collect();
+        let items: Vec<Element<_>> = self
+            .items()
+            .into_iter()
+            .filter(|i| !is_hidden(i) || (self.show_hidden_items && is_hidden(i)))
+            .map(|i| item::view(i))
+            .collect();
 
         let explorer = scrollable(
             Column::from_vec(items)
@@ -136,9 +173,12 @@ impl Application for App {
         .width(Length::Fill)
         .height(Length::FillPortion(5));
 
-        column!(top_panel::view(self.parent_dir.is_some()), explorer)
-            .height(Length::Fill)
-            .width(Length::Fill)
-            .into()
+        column!(
+            top_panel::view(self.parent_dir.is_some(), self.show_hidden_items),
+            explorer
+        )
+        .height(Length::Fill)
+        .width(Length::Fill)
+        .into()
     }
 }
