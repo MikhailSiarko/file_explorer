@@ -1,108 +1,99 @@
-use std::fs;
+use gtk::prelude::*;
 use std::path::PathBuf;
 
-use iced::{
-    theme,
-    widget::{container, mouse_area, row, svg, text, Svg},
-    Element, Length, Theme,
-};
+use relm4::prelude::*;
 
-use crate::Message;
-
-use super::styles::SvgStyles;
-
-#[derive(Debug, Clone)]
+#[tracker::track]
 pub struct Item {
-    pub name: String,
+    name: String,
     path: String,
     selected: bool,
     is_file: bool,
-    metadata: Option<fs::Metadata>,
+    icon_name: &'static str,
 }
 
-impl Item {
-    #[cfg(unix)]
-    pub fn is_hidden(&self) -> bool {
-        self.name.as_bytes().starts_with(&[b'.'])
-    }
-
-    #[cfg(windows)]
-    fn is_hidden(&self) -> bool {
-        use std::os::windows::prelude::*;
-
-        match self {
-            Ok(metadata) => {
-                let attributes = metadata.file_attributes();
-                if (attributes & 0x2) {
-                    true
-                }
-                false
-            }
-            Err(err) => println!("Error occured: [{:?}]", err.kind()),
-        }
-    }
-
-    pub fn select(&mut self) {
-        self.selected = true;
-    }
-
-    pub fn unselect(&mut self) {
-        self.selected = false;
-    }
+#[derive(Debug)]
+pub enum ItemOutput {
+    OpenFile(String),
+    OpenDirectory(String),
 }
 
-impl From<PathBuf> for Item {
-    fn from(value: PathBuf) -> Self {
-        Item {
+#[derive(Debug)]
+pub enum ItemInput {
+    ItemClicked,
+}
+
+pub struct ItemInit {
+    name: String,
+    path: String,
+    is_file: bool,
+}
+
+impl From<&PathBuf> for ItemInit {
+    fn from(value: &PathBuf) -> Self {
+        Self {
             name: String::from(value.file_name().unwrap().to_str().unwrap()),
             path: value.display().to_string(),
-            selected: false,
             is_file: value.is_file(),
-            metadata: value.metadata().map_or(None, |m| Some(m)),
         }
     }
 }
 
-pub fn view(item: &Item) -> Element<Message> {
-    let item_row = row!(
-        get_icon(&item).width(Length::FillPortion(1)),
-        text(&item.name).width(Length::FillPortion(9)),
-    )
-    .align_items(iced::Alignment::Start)
-    .height(25)
-    .width(500);
+#[relm4::factory(pub)]
+impl FactoryComponent for Item {
+    type ParentWidget = gtk::Box;
+    type CommandOutput = ();
+    type Input = ItemInput;
+    type Output = ItemOutput;
+    type Init = ItemInit;
 
-    let item_container_style = if item.selected {
-        theme::Container::Box
-    } else {
-        theme::Container::Transparent
-    };
-
-    let item_container = container(item_row)
-        .align_x(iced::alignment::Horizontal::Center)
-        .align_y(iced::alignment::Vertical::Center)
-        .style(item_container_style);
-
-    let message = if item.selected {
-        if item.is_file {
-            Message::OpenFile(item.path.clone())
-        } else {
-            Message::Next(item.path.clone())
+    fn init_model(init: Self::Init, _: &Self::Index, _: FactorySender<Self>) -> Self {
+        let icon_name = if init.is_file { "file" } else { "folder" };
+        Self {
+            name: init.name,
+            path: init.path,
+            selected: false,
+            is_file: init.is_file,
+            icon_name,
+            tracker: 0,
         }
-    } else {
-        Message::SelectItem(item.name.clone())
-    };
-    mouse_area(item_container).on_press(message).into()
-}
+    }
 
-fn get_icon(item: &Item) -> Svg<Theme> {
-    if item.is_file {
-        let file_icon_handle =
-            svg::Handle::from_memory(include_bytes!("../../resources/paper.svg"));
-        svg(file_icon_handle).style(theme::Svg::Custom(Box::new(SvgStyles::Themed)))
-    } else {
-        let dir_icon_handle =
-            svg::Handle::from_memory(include_bytes!("../../resources/folder-open.svg"));
-        svg(dir_icon_handle).style(theme::Svg::Custom(Box::new(SvgStyles::Themed)))
+    fn update(&mut self, message: Self::Input, sender: FactorySender<Self>) {
+        match message {
+            Self::Input::ItemClicked => {
+                if self.selected {
+                    let output = if self.is_file {
+                        Self::Output::OpenFile(self.path.clone())
+                    } else {
+                        Self::Output::OpenDirectory(self.path.clone())
+                    };
+                    let _ = sender.output(output);
+                } else {
+                    self.set_selected(true);
+                }
+            }
+        }
+    }
+
+    view! {
+        gtk::Box {
+            set_orientation: gtk::Orientation::Horizontal,
+            #[track = "self.changed(Item::selected())"]
+            set_class_active: ("selected", self.selected),
+            set_css_classes: &["item-box"],
+            add_controller = gtk::GestureClick {
+                connect_released[sender] => move |gesture, _, _, _| {
+                    gesture.set_state(gtk::EventSequenceState::Claimed);
+                    let _ = sender.input(Self::Input::ItemClicked);
+                },
+            },
+            gtk::Image {
+                set_icon_name: Some(self.icon_name),
+            },
+            gtk::Label {
+                set_label: &self.name,
+            }
+        }
     }
 }

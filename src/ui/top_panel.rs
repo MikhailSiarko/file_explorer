@@ -1,52 +1,87 @@
-use iced::{
-    theme,
-    widget::{button, checkbox, container, row, svg, tooltip},
-    Element, Length,
-};
+use gtk::prelude::*;
+use relm4::prelude::*;
 
-use crate::Message;
+#[derive(Debug)]
+pub enum TopPanelOutput {
+    ShowHiddenItems(bool),
+    Back,
+    Home,
+}
 
-use super::styles::SvgStyles;
+#[derive(Debug)]
+pub enum TopPanelInput {
+    DirectoryLoaded(bool),
+}
 
-pub fn view(has_parent_dir: bool, show_hidden_items: bool) -> Element<'static, Message> {
-    let home_icon_handle = svg::Handle::from_memory(include_bytes!("../../resources/people.svg"));
+#[tracker::track]
+pub struct TopPanel {
+    has_parent_dir: bool,
+}
 
-    let home = tooltip(
-        button(svg(home_icon_handle).style(theme::Svg::Custom(Box::new(SvgStyles::Light))))
-            .width(50)
-            .height(25)
-            .on_press(Message::Home),
-        "Home",
-        tooltip::Position::FollowCursor,
-    );
-    let back = if has_parent_dir {
-        let back_icon_handle =
-            svg::Handle::from_memory(include_bytes!("../../resources/left-large.svg"));
-        Some(tooltip(
-            button(svg(back_icon_handle).style(theme::Svg::Custom(Box::new(SvgStyles::Light))))
-                .width(50)
-                .height(25)
-                .on_press(Message::Back),
-            "Back",
-            tooltip::Position::FollowCursor,
-        ))
-    } else {
-        None
-    };
+pub struct TopPanelInit {
+    has_parent_dir: bool,
+}
 
-    let hidden_items_checkbox =
-        checkbox("Show hidden items", show_hidden_items).on_toggle(Message::ShowHidden);
+impl TopPanelInit {
+    pub fn new(has_parent_dir: bool) -> Self {
+        Self { has_parent_dir }
+    }
+}
 
-    container(
-        row!()
-            .push_maybe(back)
-            .push(home)
-            .push(hidden_items_checkbox)
-            .align_items(iced::Alignment::Center)
-            .width(Length::Fill)
-            .spacing(10)
-            .height(Length::Shrink),
-    )
-    .padding(5)
-    .into()
+#[relm4::component(pub)]
+impl SimpleComponent for TopPanel {
+    type Init = TopPanelInit;
+    type Input = TopPanelInput;
+    type Output = TopPanelOutput;
+
+    fn init(
+        init: Self::Init,
+        root: Self::Root,
+        sender: ComponentSender<Self>,
+    ) -> ComponentParts<Self> {
+        let model = Self {
+            has_parent_dir: init.has_parent_dir,
+            tracker: 0,
+        };
+
+        let widgets = view_output!();
+
+        ComponentParts { model, widgets }
+    }
+
+    view! {
+        gtk::Box {
+            set_orientation: gtk::Orientation::Horizontal,
+            set_spacing: 5,
+
+            gtk::Button {
+                set_icon_name: "left",
+                connect_clicked[sender] => move |_| {
+                    let _ = sender.output(Self::Output::Back);
+                },
+                #[track = "model.changed(TopPanel::has_parent_dir())"]
+                set_sensitive: model.has_parent_dir,
+            },
+
+            gtk::Button {
+                set_icon_name: "home",
+                connect_clicked[sender] => move |_| {
+                    let _ = sender.output(Self::Output::Home);
+                },
+            },
+
+            gtk::CheckButton {
+                set_label: Some("Show hidden items"),
+                connect_toggled[sender] => move |btn| {
+                    let _ = sender.output(Self::Output::ShowHiddenItems(btn.is_active()));
+                }
+            }
+        }
+    }
+
+    fn update(&mut self, message: Self::Input, _: ComponentSender<Self>) {
+        match message {
+            Self::Input::DirectoryLoaded(has_parent_dir) => self.set_has_parent_dir(has_parent_dir),
+        }
+    }
 }

@@ -1,24 +1,20 @@
 use file_explorer::App;
-use iced::{
-    font,
-    window::{self},
-    Application,
-};
+use gtk::{gdk, gio};
+use relm4::RelmApp;
 
-fn main() -> iced::Result {
-    let app_settings: iced::Settings<()> = iced::Settings {
-        default_font: iced::Font {
-            family: font::Family::Name("FiraCode Nerd Font Mono"),
-            weight: font::Weight::Normal,
-            stretch: font::Stretch::Normal,
-            style: font::Style::Normal,
-        },
-        window: iced::window::Settings {
-            position: window::Position::Centered,
-            ..iced::window::Settings::default()
-        },
-        id: Some(String::from("com.msiarko.file_explorer")),
-        ..iced::Settings::default()
-    };
-    App::run(app_settings)
+fn initialize_custom_icons() {
+    gio::resources_register_include!("icons.gresource").unwrap();
+
+    let display = gdk::Display::default().unwrap();
+    let theme = gtk::IconTheme::for_display(&display);
+    theme.add_resource_path("/com/msiarko/file_explorer/icons");
+}
+
+#[tokio::main]
+async fn main() -> Result<(), ()> {
+    let app = RelmApp::new("com.msiarko.file_explorer");
+    app.set_global_css(include_str!("../styles/index.css"));
+    initialize_custom_icons();
+    app.run::<App>(());
+    Ok(())
 }
