@@ -61,6 +61,7 @@ pub enum Message {
     Home,
     OpenFile(String),
     ShowHidden(bool),
+    SelectItem(DynamicIndex),
     None,
 }
 
@@ -220,6 +221,17 @@ impl SimpleComponent for App {
                 }
                 _ => (),
             },
+            Message::SelectItem(index) => {
+                self.items
+                    .guard()
+                    .iter_mut()
+                    .filter(|item| item.is_selected())
+                    .for_each(|item| item.select(false));
+
+                if let Some(selected_item) = self.items.guard().get_mut(index.current_index()) {
+                    selected_item.select(true);
+                }
+            }
             Message::None => (),
         }
     }
@@ -240,5 +252,6 @@ fn convert_item_response(output: ItemOutput) -> Message {
             Message::None
         }
         ItemOutput::OpenDirectory(path) => Message::Next(path),
+        ItemOutput::ItemSelected(index) => Message::SelectItem(index),
     }
 }

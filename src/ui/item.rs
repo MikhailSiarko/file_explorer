@@ -5,6 +5,7 @@ use relm4::prelude::*;
 
 #[tracker::track]
 pub struct Item {
+    index: DynamicIndex,
     name: String,
     path: String,
     selected: bool,
@@ -16,6 +17,7 @@ pub struct Item {
 pub enum ItemOutput {
     OpenFile(String),
     OpenDirectory(String),
+    ItemSelected(DynamicIndex),
 }
 
 #[derive(Debug)]
@@ -39,6 +41,16 @@ impl From<&PathBuf> for ItemInit {
     }
 }
 
+impl Item {
+    pub fn select(&mut self, selected: bool) {
+        self.set_selected(selected);
+    }
+
+    pub fn is_selected(&self) -> bool {
+        self.selected
+    }
+}
+
 #[relm4::factory(pub)]
 impl FactoryComponent for Item {
     type ParentWidget = gtk::Box;
@@ -47,9 +59,10 @@ impl FactoryComponent for Item {
     type Output = ItemOutput;
     type Init = ItemInit;
 
-    fn init_model(init: Self::Init, _: &Self::Index, _: FactorySender<Self>) -> Self {
+    fn init_model(init: Self::Init, index: &Self::Index, _: FactorySender<Self>) -> Self {
         let icon_name = if init.is_file { "file" } else { "folder" };
         Self {
+            index: index.clone(),
             name: init.name,
             path: init.path,
             selected: false,
@@ -70,7 +83,7 @@ impl FactoryComponent for Item {
                     };
                     let _ = sender.output(output);
                 } else {
-                    self.set_selected(true);
+                    let _ = sender.output(Self::Output::ItemSelected(self.index.clone()));
                 }
             }
         }

@@ -9,6 +9,7 @@ root {
   padding: 0.5rem;
   border-radius: 0.5rem;
   font-size: 1.25rem;
+  transition: background-color 0.3s;
 }
 
 .item-box > * {
@@ -16,6 +17,7 @@ root {
 }
 
 .item-box:hover {
+  transition: background-color 0.3s;
   background-color: @secondary;
 }
 
