@@ -62,7 +62,6 @@ pub enum Message {
     OpenFile(String),
     ShowHidden(bool),
     SelectItem(DynamicIndex),
-    None,
 }
 
 #[tracker::track]
@@ -185,6 +184,7 @@ impl SimpleComponent for App {
     }
 
     fn update(&mut self, message: Self::Input, _: ComponentSender<Self>) {
+        self.current_dir.reset();
         match message {
             Message::Next(current_dir) => {
                 if let Ok((parent_dir, mut items)) = load_items(&current_dir) {
@@ -211,8 +211,8 @@ impl SimpleComponent for App {
             }
             Message::ShowHidden(show_hidden_items) => {
                 self.show_hidden_items = show_hidden_items;
-                if let Ok((parent_dir, mut items)) = load_items(&self.home_dir) {
-                    self.update_data(self.home_dir.clone(), &parent_dir, &mut items);
+                if let Ok((parent_dir, mut items)) = load_items(&self.current_dir.get_value()) {
+                    self.update_data(self.current_dir.value.clone(), &parent_dir, &mut items);
                 }
             }
             Message::OpenFile(path) => match open::that(path) {
@@ -232,7 +232,6 @@ impl SimpleComponent for App {
                     selected_item.select(true);
                 }
             }
-            Message::None => (),
         }
     }
 }
@@ -247,10 +246,7 @@ fn convert_top_panel_response(output: TopPanelOutput) -> Message {
 
 fn convert_item_response(output: ItemOutput) -> Message {
     match output {
-        ItemOutput::OpenFile(path) => {
-            let _ = open::that(path);
-            Message::None
-        }
+        ItemOutput::OpenFile(path) => Message::OpenFile(path),
         ItemOutput::OpenDirectory(path) => Message::Next(path),
         ItemOutput::ItemSelected(index) => Message::SelectItem(index),
     }

@@ -80,6 +80,7 @@ impl SimpleComponent for TopPanel {
     }
 
     fn update(&mut self, message: Self::Input, _: ComponentSender<Self>) {
+        self.reset();
         match message {
             Self::Input::DirectoryLoaded(has_parent_dir) => self.set_has_parent_dir(has_parent_dir),
         }

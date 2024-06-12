@@ -73,6 +73,7 @@ impl FactoryComponent for Item {
     }
 
     fn update(&mut self, message: Self::Input, sender: FactorySender<Self>) {
+        self.reset();
         match message {
             Self::Input::ItemClicked => {
                 if self.selected {
