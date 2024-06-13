@@ -1,2 +1,2 @@
-pub mod item;
-pub mod top_panel;
+pub(crate) mod items_box;
+pub(crate) mod top_panel;

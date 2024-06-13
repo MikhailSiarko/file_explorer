@@ -1,44 +1,29 @@
-use gtk::prelude::*;
+mod init;
+mod input;
+mod output;
+
 use std::path::PathBuf;
 
+use gtk::prelude::*;
+
+pub(crate) use init::ItemInit;
+pub(crate) use input::ItemInput;
+pub(crate) use output::ItemOutput;
 use relm4::prelude::*;
 
 #[tracker::track]
 pub struct Item {
+    #[tracker::do_not_track]
     index: DynamicIndex,
+    #[tracker::do_not_track]
     name: String,
+    #[tracker::do_not_track]
     path: String,
     selected: bool,
+    #[tracker::do_not_track]
     is_file: bool,
+    #[tracker::do_not_track]
     icon_name: &'static str,
-}
-
-#[derive(Debug)]
-pub enum ItemOutput {
-    OpenFile(String),
-    OpenDirectory(String),
-    ItemSelected(DynamicIndex),
-}
-
-#[derive(Debug)]
-pub enum ItemInput {
-    ItemClicked,
-}
-
-pub struct ItemInit {
-    name: String,
-    path: String,
-    is_file: bool,
-}
-
-impl From<&PathBuf> for ItemInit {
-    fn from(value: &PathBuf) -> Self {
-        Self {
-            name: String::from(value.file_name().unwrap().to_str().unwrap()),
-            path: value.display().to_string(),
-            is_file: value.is_file(),
-        }
-    }
 }
 
 impl Item {
@@ -48,6 +33,10 @@ impl Item {
 
     pub fn is_selected(&self) -> bool {
         self.selected
+    }
+
+    pub fn init(value: &PathBuf) -> ItemInit {
+        ItemInit::from(value)
     }
 }
 
@@ -60,13 +49,13 @@ impl FactoryComponent for Item {
     type Init = ItemInit;
 
     fn init_model(init: Self::Init, index: &Self::Index, _: FactorySender<Self>) -> Self {
-        let icon_name = if init.is_file { "file" } else { "folder" };
+        let icon_name = if init.is_file() { "file" } else { "folder" };
         Self {
             index: index.clone(),
-            name: init.name,
-            path: init.path,
+            name: init.name().to_owned(),
+            path: init.path().to_owned(),
             selected: false,
-            is_file: init.is_file,
+            is_file: init.is_file(),
             icon_name,
             tracker: 0,
         }

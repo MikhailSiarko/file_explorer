@@ -1,30 +1,21 @@
+pub mod init;
+mod input;
+mod output;
+
 use gtk::prelude::*;
+use init::TopPanelInit;
+pub(crate) use input::TopPanelInput;
+pub(crate) use output::TopPanelOutput;
 use relm4::prelude::*;
-
-#[derive(Debug)]
-pub enum TopPanelOutput {
-    ShowHiddenItems(bool),
-    Back,
-    Home,
-}
-
-#[derive(Debug)]
-pub enum TopPanelInput {
-    DirectoryLoaded(bool),
-}
 
 #[tracker::track]
 pub struct TopPanel {
     has_parent_dir: bool,
 }
 
-pub struct TopPanelInit {
-    has_parent_dir: bool,
-}
-
-impl TopPanelInit {
-    pub fn new(has_parent_dir: bool) -> Self {
-        Self { has_parent_dir }
+impl TopPanel {
+    pub fn init(has_parent_dir: bool) -> TopPanelInit {
+        TopPanelInit::new(has_parent_dir)
     }
 }
 
@@ -40,7 +31,7 @@ impl SimpleComponent for TopPanel {
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
         let model = Self {
-            has_parent_dir: init.has_parent_dir,
+            has_parent_dir: init.has_parent_dir(),
             tracker: 0,
         };
 

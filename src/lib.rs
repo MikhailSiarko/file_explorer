@@ -1,141 +1,56 @@
 mod ui;
 
-use relm4::{
-    factory::FactoryVecDeque, Component, ComponentController, ComponentParts, Controller,
-    SimpleComponent,
-};
+use relm4::{Component, ComponentController, ComponentParts, Controller, SimpleComponent};
 
 use gtk::prelude::*;
 use relm4::prelude::*;
 
-use std::{
-    io::ErrorKind,
-    path::{Path, PathBuf},
-};
+use std::{io::ErrorKind, path::Path};
 use ui::{
-    item::{Item, ItemInit, ItemOutput},
-    top_panel::{TopPanel, TopPanelInit, TopPanelInput, TopPanelOutput},
+    items_box::{ItemsBox, ItemsBoxInput, ItemsBoxOutput},
+    top_panel::{TopPanel, TopPanelInput, TopPanelOutput},
 };
 
-trait Hidden {
-    fn is_hidden(&self) -> bool;
-}
-
-impl Hidden for PathBuf {
-    #[cfg(unix)]
-    fn is_hidden(&self) -> bool {
-        self.file_name()
-            .unwrap()
-            .to_str()
-            .unwrap()
-            .as_bytes()
-            .starts_with(&[b'.'])
-    }
-
-    #[cfg(windows)]
-    fn is_hidden(&self) -> bool {
-        use std::os::windows::prelude::*;
-
-        match self.metadata() {
-            Ok(metadata) => {
-                let attributes = metadata.file_attributes();
-                if (attributes & 0x2) {
-                    true
-                }
-                false
-            }
-            Err(err) => println!("Error occured: [{:?}]", err.kind()),
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum Error {
     IoError(ErrorKind),
 }
 
-#[derive(Debug, Clone)]
-pub enum Message {
-    Next(String),
+#[derive(Debug)]
+pub enum AppInput {
+    UpdateCurrentDirectory(String),
     Back,
     Home,
-    OpenFile(String),
     ShowHidden(bool),
-    SelectItem(DynamicIndex),
 }
 
 #[tracker::track]
-struct CurrentDir {
-    value: String,
-}
-
-impl From<&str> for CurrentDir {
-    fn from(value: &str) -> Self {
-        Self {
-            value: String::from(value),
-            tracker: 0,
-        }
-    }
-}
-
 pub struct App {
+    #[tracker::do_not_track]
     home_dir: String,
-    show_hidden_items: bool,
+    #[tracker::do_not_track]
     parent_dir: Option<String>,
-    current_dir: CurrentDir,
+    current_dir: String,
+    #[tracker::do_not_track]
     top_panel: Controller<TopPanel>,
-    items: FactoryVecDeque<Item>,
-}
-
-fn load_items(current_dir: &String) -> Result<(Option<String>, Vec<PathBuf>), Error> {
-    match std::fs::read_dir(&current_dir) {
-        Ok(entries) => {
-            let mut items = Vec::new();
-            for entry in entries.into_iter() {
-                if let Ok(item) = entry {
-                    items.push(item.path());
-                }
-            }
-            Ok((parent(&current_dir), items))
-        }
-        Err(error) => Err(Error::IoError(error.kind())),
-    }
+    #[tracker::do_not_track]
+    items_box: Controller<ItemsBox>,
 }
 
 fn parent<'a>(path: &'a str) -> Option<String> {
     Path::new(path).parent().map(|v| v.display().to_string())
 }
 
-impl App {
-    fn update_data(
-        &mut self,
-        current_dir: String,
-        parent_dir: &Option<String>,
-        items: &Vec<PathBuf>,
-    ) {
-        self.parent_dir = parent_dir.clone();
-        self.current_dir.set_value(current_dir);
-        self.items.guard().clear();
-        for (index, path_buf) in items
-            .into_iter()
-            .filter(|p| !p.is_hidden() || (self.show_hidden_items && p.is_hidden()))
-            .enumerate()
-        {
-            self.items.guard().insert(index, ItemInit::from(path_buf));
-        }
-    }
-}
-
 #[relm4::component(pub)]
 impl SimpleComponent for App {
     type Init = ();
-    type Input = Message;
+    type Input = AppInput;
     type Output = ();
 
     view! {
         gtk::Window {
-            #[track = "model.current_dir.changed(CurrentDir::value())"]
-            set_title: Some(model.current_dir.get_value()),
+            #[track = "model.changed(App::current_dir())"]
+            set_title: Some(model.get_current_dir()),
             set_width_request: 680,
             set_height_request: 680,
 
@@ -144,12 +59,7 @@ impl SimpleComponent for App {
                 set_spacing: 5,
 
                 model.top_panel.widget(),
-
-                gtk::ScrolledWindow {
-                    set_hscrollbar_policy: gtk::PolicyType::Never,
-                    set_vexpand: true,
-                    model.items.widget(),
-                }
+                model.items_box.widget(),
             }
         }
     }
@@ -160,23 +70,19 @@ impl SimpleComponent for App {
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
         let home_dir = env!("HOME");
-        let parent_dir = parent(&home_dir.to_owned());
-        let mut model = Self {
+        let parent_dir = parent(&home_dir);
+        let model = Self {
             home_dir: home_dir.to_owned(),
-            show_hidden_items: false,
-            items: FactoryVecDeque::builder()
-                .launch(gtk::Box::new(gtk::Orientation::Vertical, 0))
-                .forward(sender.input_sender(), convert_item_response),
+            items_box: ItemsBox::builder()
+                .launch(ItemsBox::init(home_dir, false))
+                .forward(sender.input_sender(), convert_items_box_response),
             top_panel: TopPanel::builder()
-                .launch(TopPanelInit::new(parent_dir.is_some()))
+                .launch(TopPanel::init(parent_dir.is_some()))
                 .forward(sender.input_sender(), convert_top_panel_response),
             parent_dir,
-            current_dir: CurrentDir::from(home_dir),
+            current_dir: home_dir.to_owned(),
+            tracker: 0,
         };
-
-        if let Ok((parent_dir, mut items)) = load_items(&model.home_dir) {
-            model.update_data(model.home_dir.clone(), &parent_dir, &mut items);
-        }
 
         let widgets = view_output!();
 
@@ -184,70 +90,43 @@ impl SimpleComponent for App {
     }
 
     fn update(&mut self, message: Self::Input, _: ComponentSender<Self>) {
-        self.current_dir.reset();
+        self.reset();
         match message {
-            Message::Next(current_dir) => {
-                if let Ok((parent_dir, mut items)) = load_items(&current_dir) {
-                    self.update_data(current_dir, &parent_dir, &mut items);
-                    self.top_panel
-                        .emit(TopPanelInput::DirectoryLoaded(parent_dir.is_some()))
-                }
+            AppInput::UpdateCurrentDirectory(current_dir) => {
+                self.set_current_dir(current_dir);
+                self.parent_dir = parent(self.get_current_dir());
+                self.top_panel
+                    .emit(TopPanelInput::DirectoryLoaded(self.parent_dir.is_some()));
             }
-            Message::Back => {
+            AppInput::Back => {
                 if let Some(parent) = self.parent_dir.clone() {
-                    if let Ok((parent_dir, mut items)) = load_items(&parent) {
-                        self.update_data(parent, &parent_dir, &mut items);
-                        self.top_panel
-                            .emit(TopPanelInput::DirectoryLoaded(parent_dir.is_some()))
-                    }
+                    self.items_box.emit(ItemsBoxInput::LoadDirectory(parent));
                 }
             }
-            Message::Home => {
-                if let Ok((parent_dir, mut items)) = load_items(&self.home_dir) {
-                    self.update_data(self.home_dir.clone(), &parent_dir, &mut items);
-                    self.top_panel
-                        .emit(TopPanelInput::DirectoryLoaded(parent_dir.is_some()))
-                }
+            AppInput::Home => {
+                self.items_box
+                    .emit(ItemsBoxInput::LoadDirectory(self.home_dir.clone()));
             }
-            Message::ShowHidden(show_hidden_items) => {
-                self.show_hidden_items = show_hidden_items;
-                if let Ok((parent_dir, mut items)) = load_items(&self.current_dir.get_value()) {
-                    self.update_data(self.current_dir.value.clone(), &parent_dir, &mut items);
-                }
-            }
-            Message::OpenFile(path) => match open::that(path) {
-                Err(error) => {
-                    println!("Error occured: [{:?}]", error.kind());
-                }
-                _ => (),
-            },
-            Message::SelectItem(index) => {
-                self.items
-                    .guard()
-                    .iter_mut()
-                    .filter(|item| item.is_selected())
-                    .for_each(|item| item.select(false));
-
-                if let Some(selected_item) = self.items.guard().get_mut(index.current_index()) {
-                    selected_item.select(true);
-                }
+            AppInput::ShowHidden(show_hidden_items) => {
+                self.items_box
+                    .emit(ItemsBoxInput::ShowHiddenItems(show_hidden_items));
             }
         }
     }
 }
 
-fn convert_top_panel_response(output: TopPanelOutput) -> Message {
+fn convert_top_panel_response(output: TopPanelOutput) -> AppInput {
     match output {
-        TopPanelOutput::ShowHiddenItems(value) => Message::ShowHidden(value),
-        TopPanelOutput::Home => Message::Home,
-        TopPanelOutput::Back => Message::Back,
+        TopPanelOutput::ShowHiddenItems(value) => AppInput::ShowHidden(value),
+        TopPanelOutput::Home => AppInput::Home,
+        TopPanelOutput::Back => AppInput::Back,
     }
 }
 
-fn convert_item_response(output: ItemOutput) -> Message {
+fn convert_items_box_response(output: ItemsBoxOutput) -> AppInput {
     match output {
-        ItemOutput::OpenFile(path) => Message::OpenFile(path),
-        ItemOutput::OpenDirectory(path) => Message::Next(path),
-        ItemOutput::ItemSelected(index) => Message::SelectItem(index),
+        ItemsBoxOutput::DirectoryLoaded(current_dir) => {
+            AppInput::UpdateCurrentDirectory(current_dir)
+        }
     }
 }
