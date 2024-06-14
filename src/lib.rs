@@ -1,6 +1,6 @@
 mod ui;
 
-use relm4::{Component, ComponentController, ComponentParts, Controller, SimpleComponent};
+use relm4::{Component, ComponentController, ComponentParts, Controller};
 
 use gtk::prelude::*;
 use relm4::prelude::*;
@@ -34,7 +34,7 @@ pub struct App {
     #[tracker::do_not_track]
     top_panel: Controller<TopPanel>,
     #[tracker::do_not_track]
-    items_box: Controller<ItemsBox>,
+    items_box: AsyncController<ItemsBox>,
 }
 
 fn parent<'a>(path: &'a str) -> Option<String> {
@@ -42,10 +42,11 @@ fn parent<'a>(path: &'a str) -> Option<String> {
 }
 
 #[relm4::component(pub)]
-impl SimpleComponent for App {
+impl Component for App {
     type Init = ();
     type Input = AppInput;
     type Output = ();
+    type CommandOutput = ();
 
     view! {
         gtk::Window {
@@ -89,7 +90,7 @@ impl SimpleComponent for App {
         ComponentParts { model, widgets }
     }
 
-    fn update(&mut self, message: Self::Input, _: ComponentSender<Self>) {
+    fn update(&mut self, message: Self::Input, _: ComponentSender<Self>, _: &Self::Root) {
         self.reset();
         match message {
             AppInput::UpdateCurrentDirectory(current_dir) => {

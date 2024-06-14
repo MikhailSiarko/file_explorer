@@ -15,21 +15,6 @@ use crate::Error;
 
 use item::{Item, ItemOutput};
 
-fn load_items(current_dir: &String) -> Result<Vec<PathBuf>, Error> {
-    match std::fs::read_dir(&current_dir) {
-        Ok(entries) => {
-            let mut items = Vec::new();
-            for entry in entries.into_iter() {
-                if let Ok(item) = entry {
-                    items.push(item.path());
-                }
-            }
-            Ok(items)
-        }
-        Err(error) => Err(Error::IoError(error.kind())),
-    }
-}
-
 trait Hidden {
     fn is_hidden(&self) -> bool;
 }
@@ -43,6 +28,35 @@ pub struct ItemsBox {
 }
 
 impl ItemsBox {
+    async fn load(&mut self, current_dir: &str, sender: &AsyncComponentSender<Self>) {
+        match self.load_items(current_dir).await {
+            Err(error) => {
+                println!("Error occured: [{:?}]", error);
+            }
+            Ok(items) => {
+                self.set_current_dir(current_dir.to_owned());
+                self.update_items(&items);
+                let _ = sender.output(ItemsBoxOutput::DirectoryLoaded(current_dir.to_owned()));
+            }
+        }
+    }
+
+    async fn load_items(&mut self, current_dir: &str) -> Result<Vec<PathBuf>, Error> {
+        match tokio::fs::read_dir(&current_dir).await {
+            Ok(mut entries) => {
+                let mut items = Vec::new();
+                while let Ok(option) = entries.next_entry().await {
+                    match option {
+                        Some(item) => items.push(item.path()),
+                        None => break,
+                    }
+                }
+                Ok(items)
+            }
+            Err(error) => Err(Error::IoError(error.kind())),
+        }
+    }
+
     fn update_items(&mut self, items: &Vec<PathBuf>) {
         self.items.guard().clear();
         for (index, path_buf) in items
@@ -87,17 +101,18 @@ impl Hidden for PathBuf {
     }
 }
 
-#[relm4::component(pub)]
-impl SimpleComponent for ItemsBox {
+#[relm4::component(pub, async)]
+impl AsyncComponent for ItemsBox {
     type Init = ItemsBoxInit;
     type Input = ItemsBoxInput;
     type Output = ItemsBoxOutput;
+    type CommandOutput = ();
 
-    fn init(
+    async fn init(
         init: Self::Init,
         root: Self::Root,
-        sender: ComponentSender<Self>,
-    ) -> ComponentParts<Self> {
+        sender: AsyncComponentSender<Self>,
+    ) -> AsyncComponentParts<Self> {
         let mut item_box = Self {
             current_dir: init.current_dir().to_owned(),
             show_hidden_items: init.show_hidden_items(),
@@ -107,14 +122,11 @@ impl SimpleComponent for ItemsBox {
             tracker: 0,
         };
 
-        if let Ok(mut items) = load_items(item_box.get_current_dir()) {
-            item_box.update_items(&mut items);
-            let _ = sender.output(Self::Output::DirectoryLoaded(item_box.current_dir.clone()));
-        }
+        item_box.load(init.current_dir(), &sender).await;
 
         let widgets = view_output!();
 
-        ComponentParts {
+        AsyncComponentParts {
             model: item_box,
             widgets,
         }
@@ -128,16 +140,15 @@ impl SimpleComponent for ItemsBox {
         }
     }
 
-    fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>) {
+    async fn update(
+        &mut self,
+        message: Self::Input,
+        sender: AsyncComponentSender<Self>,
+        _: &Self::Root,
+    ) {
         self.reset();
         match message {
-            Self::Input::LoadDirectory(current_dir) => {
-                if let Ok(mut items) = load_items(&current_dir) {
-                    self.set_current_dir(current_dir);
-                    self.update_items(&mut items);
-                    let _ = sender.output(Self::Output::DirectoryLoaded(self.current_dir.clone()));
-                }
-            }
+            Self::Input::LoadDirectory(current_dir) => self.load(&current_dir, &sender).await,
             Self::Input::OpenFile(path) => match open::that(path) {
                 Err(error) => {
                     println!("Error occured: [{:?}]", error.kind());
