@@ -12,9 +12,13 @@ fn initialize_custom_icons() {
 
 #[tokio::main]
 async fn main() -> Result<(), ()> {
-    let app = RelmApp::new("com.msiarko.file_explorer");
-    app.set_global_css(include_str!("../styles/index.css"));
+    let application = gtk::Application::builder()
+        .application_id("com.msiarko.file_explorer")
+        .build();
+
+    let relm_app = RelmApp::from_app(application);
+    relm_app.set_global_css(include_str!("../styles/index.css"));
     initialize_custom_icons();
-    app.run::<App>(());
+    relm_app.run::<App>(());
     Ok(())
 }

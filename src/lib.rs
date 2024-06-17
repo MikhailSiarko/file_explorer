@@ -1,3 +1,4 @@
+mod core;
 mod ui;
 
 use relm4::{Component, ComponentController, ComponentParts, Controller};
@@ -5,16 +6,12 @@ use relm4::{Component, ComponentController, ComponentParts, Controller};
 use gtk::prelude::*;
 use relm4::prelude::*;
 
-use std::{io::ErrorKind, path::Path};
+use core::errors::Error;
+use std::path::Path;
 use ui::{
     items_box::{ItemsBox, ItemsBoxInput, ItemsBoxOutput},
     top_panel::{TopPanel, TopPanelInput, TopPanelOutput},
 };
-
-#[derive(Debug)]
-pub enum Error {
-    IoError(ErrorKind),
-}
 
 #[derive(Debug)]
 pub enum AppInput {
@@ -22,6 +19,7 @@ pub enum AppInput {
     Back,
     Home,
     ShowHidden(bool),
+    Error(Error),
 }
 
 #[tracker::track]
@@ -112,6 +110,7 @@ impl Component for App {
                 self.items_box
                     .emit(ItemsBoxInput::ShowHiddenItems(show_hidden_items));
             }
+            AppInput::Error(error) => println!("Error occured: [{:?}]", error),
         }
     }
 }
@@ -129,5 +128,6 @@ fn convert_items_box_response(output: ItemsBoxOutput) -> AppInput {
         ItemsBoxOutput::DirectoryLoaded(current_dir) => {
             AppInput::UpdateCurrentDirectory(current_dir)
         }
+        ItemsBoxOutput::Error(error) => AppInput::Error(error),
     }
 }

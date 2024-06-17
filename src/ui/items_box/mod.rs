@@ -11,9 +11,9 @@ pub(crate) use input::ItemsBoxInput;
 pub(crate) use output::ItemsBoxOutput;
 use relm4::{factory::FactoryVecDeque, prelude::*};
 
-use crate::Error;
-
 use item::{Item, ItemOutput};
+
+use crate::core::{errors::Error, load_items};
 
 trait Hidden {
     fn is_hidden(&self) -> bool;
@@ -29,31 +29,15 @@ pub struct ItemsBox {
 
 impl ItemsBox {
     async fn load(&mut self, current_dir: &str, sender: &AsyncComponentSender<Self>) {
-        match self.load_items(current_dir).await {
+        match load_items(current_dir).await {
             Err(error) => {
-                println!("Error occured: [{:?}]", error);
+                let _ = sender.output(ItemsBoxOutput::Error(error));
             }
             Ok(items) => {
                 self.set_current_dir(current_dir.to_owned());
                 self.update_items(&items);
                 let _ = sender.output(ItemsBoxOutput::DirectoryLoaded(current_dir.to_owned()));
             }
-        }
-    }
-
-    async fn load_items(&mut self, current_dir: &str) -> Result<Vec<PathBuf>, Error> {
-        match tokio::fs::read_dir(&current_dir).await {
-            Ok(mut entries) => {
-                let mut items = Vec::new();
-                while let Ok(option) = entries.next_entry().await {
-                    match option {
-                        Some(item) => items.push(item.path()),
-                        None => break,
-                    }
-                }
-                Ok(items)
-            }
-            Err(error) => Err(Error::IoError(error.kind())),
         }
     }
 
@@ -149,9 +133,12 @@ impl AsyncComponent for ItemsBox {
         self.reset();
         match message {
             Self::Input::LoadDirectory(current_dir) => self.load(&current_dir, &sender).await,
-            Self::Input::OpenFile(path) => match open::that(path) {
+            Self::Input::OpenFile(path) => match open::that(&path) {
                 Err(error) => {
-                    println!("Error occured: [{:?}]", error.kind());
+                    let _ = sender.output(Self::Output::Error(Error::OpenFileError(
+                        path,
+                        error.kind(),
+                    )));
                 }
                 _ => (),
             },
