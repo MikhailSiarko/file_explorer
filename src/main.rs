@@ -1,5 +1,10 @@
 use file_explorer::App;
-use gtk::{gdk, gio};
+use gtk::{
+    gdk,
+    gio::{self, ActionEntry},
+    prelude::*,
+    Application,
+};
 use relm4::RelmApp;
 
 fn initialize_custom_icons() {
@@ -10,15 +15,24 @@ fn initialize_custom_icons() {
     theme.add_resource_path("/com/msiarko/file_explorer/icons");
 }
 
-#[tokio::main]
-async fn main() -> Result<(), ()> {
-    let application = gtk::Application::builder()
-        .application_id("com.msiarko.file_explorer")
-        .build();
+#[cfg(unix)]
+static CLOSE_SHORTCUT: &str = "<Meta>Q";
+#[cfg(windows)]
+static CLOSE_SHORTCUT: &str = "<Alt>F4";
 
-    let relm_app = RelmApp::from_app(application);
+fn setup_shortcuts() {
+    let app = relm4::main_application();
+    let action_close = ActionEntry::builder("close")
+        .activate(|a: &Application, _, _| a.quit())
+        .build();
+    app.add_action_entries([action_close]);
+    app.set_accels_for_action("app.close", &[CLOSE_SHORTCUT]);
+}
+
+fn main() {
+    let relm_app = RelmApp::new("com.msiarko.file_explorer");
     relm_app.set_global_css(include_str!("../styles/index.css"));
     initialize_custom_icons();
+    setup_shortcuts();
     relm_app.run::<App>(());
-    Ok(())
 }
