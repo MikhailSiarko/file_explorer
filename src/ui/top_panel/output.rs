@@ -1,6 +1,6 @@
 #[derive(Debug)]
 pub enum TopPanelOutput {
-    ShowHiddenItems(bool),
+    HiddenItemsToggled(bool),
     Back,
     Home,
 }

@@ -153,8 +153,8 @@ impl AsyncComponent for ItemsBox {
                     selected_item.select(true);
                 }
             }
-            Self::Input::ShowHiddenItems(show_hidden_items) => {
-                self.set_show_hidden_items(show_hidden_items);
+            Self::Input::ToggleShowHiddenItems => {
+                self.set_show_hidden_items(!self.show_hidden_items);
                 if self.changed(ItemsBox::show_hidden_items()) {
                     sender.input(Self::Input::LoadDirectory(self.current_dir.clone()))
                 }
