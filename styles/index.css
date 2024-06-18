@@ -24,3 +24,7 @@ root {
 .selected {
   background-color: @secondary;
 }
+
+.hidden-items-label {
+    font-size: 0.6rem;
+}

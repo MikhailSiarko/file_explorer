@@ -49,6 +49,7 @@ impl SimpleComponent for TopPanel {
 
             gtk::Button {
                 set_icon_name: "left",
+                set_tooltip_text: Some("Back"),
                 connect_clicked[sender] => move |_| {
                     let _ = sender.output(Self::Output::Back);
                 },
@@ -58,18 +59,27 @@ impl SimpleComponent for TopPanel {
 
             gtk::Button {
                 set_icon_name: "home",
+                set_tooltip_text: Some("Home"),
                 connect_clicked[sender] => move |_| {
                     let _ = sender.output(Self::Output::Home);
                 },
             },
 
-            gtk::CheckButton {
-                set_label: Some("Show hidden items"),
-                #[track = "model.changed(TopPanel::show_hidden_items())"]
-                set_active: model.show_hidden_items,
-                connect_toggled[sender] => move |btn| {
-                    sender.input(Self::Input::ShowHiddenItems(btn.is_active()));
+            gtk::Box {
+                set_orientation: gtk::Orientation::Vertical,
+                gtk::CheckButton {
+                    set_halign: gtk::Align::Center,
+                    #[track = "model.changed(TopPanel::show_hidden_items())"]
+                    set_active: model.show_hidden_items,
+                    connect_toggled[sender] => move |btn| {
+                        sender.input(Self::Input::ShowHiddenItems(btn.is_active()));
+                    },
                 },
+                gtk::Label {
+                    set_halign: gtk::Align::Center,
+                    set_text: "Hidden items",
+                    set_css_classes: &["hidden-items-label"]
+                }
             }
         }
     }
