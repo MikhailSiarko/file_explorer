@@ -4,9 +4,9 @@ mod ui;
 
 use relm4::{Component, ComponentController, ComponentParts, Controller};
 
-use gtk::{gio::ActionEntry, prelude::*, Application};
+use gtk::prelude::*;
 use relm4::prelude::*;
-use shortcuts::{CLOSE_APP, TOGGLE_HIDDEN_ITEMS};
+use shortcuts::setup_shortcuts;
 
 use core::errors::Error;
 use std::path::Path;
@@ -20,7 +20,8 @@ pub enum AppInput {
     UpdateCurrentDirectory(String),
     Back,
     Home,
-    ShowHidden(bool),
+    ToggleShowHiddenItems,
+    ShowHiddenItems(bool),
     Error(Error),
 }
 
@@ -39,26 +40,6 @@ pub struct App {
 
 fn parent<'a>(path: &'a str) -> Option<String> {
     Path::new(path).parent().map(|v| v.display().to_string())
-}
-
-impl App {
-    fn setup_shortcuts(&self) {
-        let app = relm4::main_application();
-        let action_close = ActionEntry::builder("close")
-            .activate(|a: &Application, _, _| a.quit())
-            .build();
-
-        let top_panel_sender = self.top_panel.sender().clone();
-        let show_hidden = ActionEntry::builder("show_hidden")
-            .activate(move |_: &Application, _, _| {
-                top_panel_sender.emit(TopPanelInput::ToggleShowHiddenItems);
-            })
-            .build();
-
-        app.add_action_entries([action_close, show_hidden]);
-        app.set_accels_for_action("app.close", &[CLOSE_APP]);
-        app.set_accels_for_action("app.show_hidden", &[TOGGLE_HIDDEN_ITEMS]);
-    }
 }
 
 #[relm4::component(pub)]
@@ -92,6 +73,7 @@ impl Component for App {
     ) -> ComponentParts<Self> {
         let home_dir = env!("HOME");
         let parent_dir = parent(&home_dir);
+
         let model = Self {
             home_dir: home_dir.to_owned(),
             items_box: ItemsBox::builder()
@@ -105,10 +87,8 @@ impl Component for App {
             tracker: 0,
         };
 
-        model.setup_shortcuts();
-
+        setup_shortcuts(&relm4::main_application(), &sender);
         let widgets = view_output!();
-
         ComponentParts { model, widgets }
     }
 
@@ -129,7 +109,13 @@ impl Component for App {
             AppInput::Home => self
                 .items_box
                 .emit(ItemsBoxInput::LoadDirectory(self.home_dir.clone())),
-            AppInput::ShowHidden(_) => self.items_box.emit(ItemsBoxInput::ToggleShowHiddenItems),
+            AppInput::ToggleShowHiddenItems => {
+                self.items_box.emit(ItemsBoxInput::ToggleShowHiddenItems);
+                self.top_panel.emit(TopPanelInput::ToggleShowHiddenItems);
+            }
+            AppInput::ShowHiddenItems(show) => {
+                self.items_box.emit(ItemsBoxInput::ShowHiddenItems(show));
+            }
             AppInput::Error(error) => println!("Error occured: [{:?}]", error),
         }
     }
@@ -137,7 +123,7 @@ impl Component for App {
 
 fn convert_top_panel_response(output: TopPanelOutput) -> AppInput {
     match output {
-        TopPanelOutput::HiddenItemsToggled(value) => AppInput::ShowHidden(value),
+        TopPanelOutput::HiddenItemsToggled(show) => AppInput::ShowHiddenItems(show),
         TopPanelOutput::Home => AppInput::Home,
         TopPanelOutput::Back => AppInput::Back,
     }

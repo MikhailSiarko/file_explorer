@@ -4,6 +4,7 @@ use relm4::factory::DynamicIndex;
 pub enum ItemsBoxInput {
     LoadDirectory(String),
     ToggleShowHiddenItems,
+    ShowHiddenItems(bool),
     OpenFile(String),
     SelectItem(DynamicIndex),
 }

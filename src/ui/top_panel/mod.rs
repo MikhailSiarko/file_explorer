@@ -67,19 +67,25 @@ impl SimpleComponent for TopPanel {
                 set_label: Some("Show hidden items"),
                 #[track = "model.changed(TopPanel::show_hidden_items())"]
                 set_active: model.show_hidden_items,
-                connect_toggled[sender] => move |button| {
-                    let _ = sender.output(Self::Output::HiddenItemsToggled(button.is_active()));
+                connect_toggled[sender] => move |btn| {
+                    sender.input(Self::Input::ShowHiddenItems(btn.is_active()));
                 },
             }
         }
     }
 
-    fn update(&mut self, message: Self::Input, _: ComponentSender<Self>) {
+    fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>) {
         self.reset();
         match message {
             Self::Input::DirectoryLoaded(has_parent_dir) => self.set_has_parent_dir(has_parent_dir),
             Self::Input::ToggleShowHiddenItems => {
-                self.set_show_hidden_items(!self.show_hidden_items)
+                self.set_show_hidden_items(!self.show_hidden_items);
+            }
+            Self::Input::ShowHiddenItems(show) => {
+                self.set_show_hidden_items(show);
+                if self.changed(TopPanel::show_hidden_items()) {
+                    let _ = sender.output(Self::Output::HiddenItemsToggled(show));
+                }
             }
         }
     }

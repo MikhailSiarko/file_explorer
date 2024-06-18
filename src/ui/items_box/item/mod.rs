@@ -88,7 +88,7 @@ impl FactoryComponent for Item {
             add_controller = gtk::GestureClick {
                 connect_released[sender] => move |gesture, _, _, _| {
                     gesture.set_state(gtk::EventSequenceState::Claimed);
-                    let _ = sender.input(Self::Input::ItemClicked);
+                    sender.input(Self::Input::ItemClicked);
                 },
             },
             gtk::Image {
