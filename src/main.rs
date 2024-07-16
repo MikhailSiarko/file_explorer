@@ -15,7 +15,7 @@ fn initialize_custom_icons() {
 
 fn main() {
     let relm_app = RelmApp::new("com.msiarko.file_explorer");
-    relm_app.set_global_css(include_str!("../styles/index.css"));
+    relm4::set_global_css(include_str!("../styles/index.css"));
     initialize_custom_icons();
     relm_app.run::<App>(());
 }
