@@ -4,9 +4,9 @@ pub struct ItemsBoxInit {
 }
 
 impl ItemsBoxInit {
-    pub fn new(current_dir: &str, show_hidden_items: bool) -> Self {
+    pub fn new(current_dir: String, show_hidden_items: bool) -> Self {
         Self {
-            _current_dir: current_dir.to_owned(),
+            _current_dir: current_dir,
             _show_hidden_items: show_hidden_items,
         }
     }

@@ -41,10 +41,10 @@ impl ItemsBox {
         }
     }
 
-    fn update_items(&mut self, items: &Vec<PathBuf>) {
+    fn update_items(&mut self, items: &[PathBuf]) {
         self.items.guard().clear();
         for (index, path_buf) in items
-            .into_iter()
+            .iter()
             .filter(|p| !p.is_hidden() || (self.show_hidden_items && p.is_hidden()))
             .enumerate()
         {
@@ -53,7 +53,7 @@ impl ItemsBox {
     }
 
     pub fn init(current_dir: &str, show_hidden_items: bool) -> ItemsBoxInit {
-        ItemsBoxInit::new(current_dir, show_hidden_items)
+        ItemsBoxInit::new(current_dir.to_owned(), show_hidden_items)
     }
 }
 
@@ -133,15 +133,14 @@ impl AsyncComponent for ItemsBox {
         self.reset();
         match message {
             Self::Input::LoadDirectory(current_dir) => self.load(&current_dir, &sender).await,
-            Self::Input::OpenFile(path) => match open::that(&path) {
-                Err(error) => {
+            Self::Input::OpenFile(path) => {
+                if let Err(error) = open::that(&path) {
                     let _ = sender.output(Self::Output::Error(Error::OpenFileError(
                         path,
                         error.kind(),
                     )));
                 }
-                _ => (),
-            },
+            }
             Self::Input::SelectItem(index) => {
                 self.items
                     .guard()

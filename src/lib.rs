@@ -38,7 +38,7 @@ pub struct App {
     items_box: AsyncController<ItemsBox>,
 }
 
-fn parent<'a>(path: &'a str) -> Option<String> {
+fn parent(path: &str) -> Option<String> {
     Path::new(path).parent().map(|v| v.display().to_string())
 }
 
@@ -72,7 +72,7 @@ impl Component for App {
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
         let home_dir = env!("HOME");
-        let parent_dir = parent(&home_dir);
+        let parent_dir = parent(home_dir);
 
         let model = Self {
             home_dir: home_dir.to_owned(),
