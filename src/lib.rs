@@ -8,7 +8,6 @@ use gtk::prelude::*;
 use relm4::prelude::*;
 use shortcuts::setup_shortcuts;
 
-use core::errors::Error;
 use std::path::Path;
 use ui::{
     items_box::{ItemsBox, ItemsBoxInput, ItemsBoxOutput},
@@ -22,7 +21,7 @@ pub enum AppInput {
     Home,
     ToggleShowHiddenItems,
     ShowHiddenItems(bool),
-    Error(Error),
+    Error(String),
 }
 
 #[tracker::track]

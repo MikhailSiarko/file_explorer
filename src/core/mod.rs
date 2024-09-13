@@ -1,21 +1,17 @@
-pub(crate) mod errors;
-
+use anyhow::{Context, Result};
 use std::path::PathBuf;
 
-use errors::Error;
-
-pub async fn load_items(current_dir: &str) -> Result<Vec<PathBuf>, Error> {
-    match tokio::fs::read_dir(&current_dir).await {
-        Ok(mut entries) => {
-            let mut items = Vec::new();
-            while let Ok(option) = entries.next_entry().await {
-                match option {
-                    Some(item) => items.push(item.path()),
-                    None => break,
-                }
-            }
-            Ok(items)
-        }
-        Err(error) => Err(Error::IoError(error.kind())),
+pub async fn load_items(current_dir: &str) -> Result<Vec<PathBuf>> {
+    let mut entries = tokio::fs::read_dir(&current_dir)
+        .await
+        .context("Failed to read directory")?;
+    let mut items = Vec::new();
+    while let Some(item) = entries
+        .next_entry()
+        .await
+        .context("Failed to read a directory item")?
+    {
+        items.push(item.path());
     }
+    Ok(items)
 }

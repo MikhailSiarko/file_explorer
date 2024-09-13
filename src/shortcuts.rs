@@ -9,9 +9,9 @@ static CLOSE_APP: &str = "<Meta>Q";
 static CLOSE_APP: &str = "<Alt>F4";
 
 #[cfg(unix)]
-static TOGGLE_HIDDEN_ITEMS: &str = "<Meta>H";
+static TOGGLE_HIDDEN_ITEMS: &str = "<Meta>I";
 #[cfg(windows)]
-static TOGGLE_HIDDEN_ITEMS: &str = "<Alt>H";
+static TOGGLE_HIDDEN_ITEMS: &str = "<Alt>I";
 
 static HOME: &str = "Home";
 static BACK: &str = "BackSpace";

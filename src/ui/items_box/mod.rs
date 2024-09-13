@@ -13,7 +13,7 @@ use relm4::{factory::FactoryVecDeque, prelude::*};
 
 use item::{Item, ItemOutput};
 
-use crate::core::{errors::Error, load_items};
+use crate::core::load_items;
 
 trait Hidden {
     fn is_hidden(&self) -> bool;
@@ -28,19 +28,6 @@ pub struct ItemsBox {
 }
 
 impl ItemsBox {
-    async fn load(&mut self, current_dir: &str, sender: &AsyncComponentSender<Self>) {
-        match load_items(current_dir).await {
-            Err(error) => {
-                let _ = sender.output(ItemsBoxOutput::Error(error));
-            }
-            Ok(items) => {
-                self.set_current_dir(current_dir.to_owned());
-                self.update_items(&items);
-                let _ = sender.output(ItemsBoxOutput::DirectoryLoaded(current_dir.to_owned()));
-            }
-        }
-    }
-
     fn update_items(&mut self, items: &[PathBuf]) {
         self.items.guard().clear();
         for (index, path_buf) in items
@@ -65,7 +52,7 @@ impl Hidden for PathBuf {
             .to_str()
             .unwrap()
             .as_bytes()
-            .starts_with(&[b'.'])
+            .starts_with(b".")
     }
 
     #[cfg(windows)]
@@ -106,7 +93,15 @@ impl AsyncComponent for ItemsBox {
             tracker: 0,
         };
 
-        item_box.load(init.current_dir(), &sender).await;
+        match load_items(init.current_dir()).await {
+            Err(error) => {
+                let _ = sender.output(Self::Output::Error(error.to_string()));
+            }
+            Ok(items) => {
+                item_box.update_items(&items);
+                let _ = sender.output(Self::Output::DirectoryLoaded(init.current_dir().to_owned()));
+            }
+        }
 
         let widgets = view_output!();
 
@@ -132,13 +127,19 @@ impl AsyncComponent for ItemsBox {
     ) {
         self.reset();
         match message {
-            Self::Input::LoadDirectory(current_dir) => self.load(&current_dir, &sender).await,
+            Self::Input::LoadDirectory(current_dir) => match load_items(&current_dir).await {
+                Err(error) => {
+                    let _ = sender.output(Self::Output::Error(error.to_string()));
+                }
+                Ok(items) => {
+                    self.set_current_dir(current_dir.to_owned());
+                    self.update_items(&items);
+                    let _ = sender.output(Self::Output::DirectoryLoaded(current_dir.to_owned()));
+                }
+            },
             Self::Input::OpenFile(path) => {
                 if let Err(error) = open::that(&path) {
-                    let _ = sender.output(Self::Output::Error(Error::OpenFileError(
-                        path,
-                        error.kind(),
-                    )));
+                    let _ = sender.output(Self::Output::Error(error.to_string()));
                 }
             }
             Self::Input::SelectItem(index) => {
