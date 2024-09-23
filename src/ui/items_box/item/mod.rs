@@ -64,7 +64,7 @@ impl FactoryComponent for Item {
     fn update(&mut self, message: Self::Input, sender: FactorySender<Self>) {
         self.reset();
         match message {
-            Self::Input::ItemClicked => {
+            Self::Input::ItemRightClicked => {
                 if self.selected {
                     let output = if self.is_file {
                         Self::Output::OpenFile(self.path.clone())
@@ -73,6 +73,11 @@ impl FactoryComponent for Item {
                     };
                     let _ = sender.output(output);
                 } else {
+                    let _ = sender.output(Self::Output::ItemSelected(self.index.clone()));
+                }
+            }
+            Self::Input::ItemLeftClicked => {
+                if !self.selected {
                     let _ = sender.output(Self::Output::ItemSelected(self.index.clone()));
                 }
             }
@@ -86,10 +91,18 @@ impl FactoryComponent for Item {
             set_class_active: ("selected", self.selected),
             set_css_classes: &["item-box"],
             add_controller = gtk::GestureClick {
+                set_button: gtk::gdk::ffi::GDK_BUTTON_PRIMARY as u32,
                 connect_released[sender] => move |gesture, _, _, _| {
                     gesture.set_state(gtk::EventSequenceState::Claimed);
-                    sender.input(Self::Input::ItemClicked);
-                },
+                    sender.input(Self::Input::ItemRightClicked);
+                }
+            },
+            add_controller = gtk::GestureClick {
+                set_button: gtk::gdk::ffi::GDK_BUTTON_SECONDARY as u32,
+                connect_released[sender] => move |gesture, _, _, _| {
+                    gesture.set_state(gtk::EventSequenceState::Claimed);
+                    sender.input(Self::Input::ItemLeftClicked);
+                }
             },
             gtk::Image {
                 set_icon_name: Some(self.icon_name),

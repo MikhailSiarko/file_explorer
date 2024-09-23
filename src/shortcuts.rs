@@ -17,7 +17,7 @@ static HOME: &str = "Home";
 static BACK: &str = "BackSpace";
 
 pub fn setup_shortcuts(app: &Application, sender: &ComponentSender<App>) {
-    let close = ActionEntry::builder("close")
+    let close = ActionEntry::builder("quit")
         .activate(|a: &Application, _, _| a.quit())
         .build();
 
@@ -49,7 +49,7 @@ pub fn setup_shortcuts(app: &Application, sender: &ComponentSender<App>) {
         .build();
 
     app.add_action_entries([close, show_hidden, home, back]);
-    app.set_accels_for_action("app.close", &[CLOSE_APP]);
+    app.set_accels_for_action("app.quit", &[CLOSE_APP]);
     app.set_accels_for_action("app.show_hidden", &[TOGGLE_HIDDEN_ITEMS]);
     app.set_accels_for_action("app.home", &[HOME]);
     app.set_accels_for_action("app.back", &[BACK]);

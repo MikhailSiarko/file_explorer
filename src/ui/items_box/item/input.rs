@@ -1,4 +1,5 @@
 #[derive(Debug)]
 pub enum ItemInput {
-    ItemClicked,
+    ItemRightClicked,
+    ItemLeftClicked,
 }

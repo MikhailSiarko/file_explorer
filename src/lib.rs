@@ -1,7 +1,9 @@
 mod core;
+mod menubar;
 mod shortcuts;
 mod ui;
 
+use menubar::setup_menubar;
 use relm4::{Component, ComponentController, ComponentParts, Controller};
 
 use gtk::prelude::*;
@@ -49,11 +51,12 @@ impl Component for App {
     type CommandOutput = ();
 
     view! {
-        gtk::Window {
+        gtk::ApplicationWindow {
             #[track = "model.changed(App::current_dir())"]
             set_title: Some(model.get_current_dir()),
             set_width_request: 680,
             set_height_request: 680,
+            set_show_menubar: true,
 
             gtk::Box {
                 set_orientation: gtk::Orientation::Vertical,
@@ -87,6 +90,7 @@ impl Component for App {
         };
 
         setup_shortcuts(&relm4::main_application(), &sender);
+        setup_menubar(&relm4::main_application());
         let widgets = view_output!();
         ComponentParts { model, widgets }
     }
