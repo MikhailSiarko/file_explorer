@@ -1,0 +1,30 @@
+@define-color secondary #3b3b3b;
+
+root {
+  font-size: 10px;
+}
+
+.item-box {
+  margin: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  font-size: 1.25rem;
+  transition: background-color 0.3s;
+}
+
+.item-box > * {
+  margin: 0.5rem;
+}
+
+.item-box:hover {
+  transition: background-color 0.3s;
+  background-color: @secondary;
+}
+
+.selected {
+  background-color: @secondary;
+}
+
+.hidden-items-label {
+    font-size: 0.6rem;
+}

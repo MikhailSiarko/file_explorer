@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+    <gresource prefix="com/msiarko/file_explorer/icons/24x24/actions/">
+        <file alias="folder.png">icons/folder.png</file>
+        <file alias="left.png">icons/left.png</file>
+        <file alias="file.png">icons/file.png</file>
+        <file alias="home.png">icons/home.png</file>
+    </gresource>
+</gresources>
