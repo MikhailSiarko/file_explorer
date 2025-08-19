@@ -39,6 +39,16 @@ impl ItemsBox {
         }
     }
 
+    fn sort_by_type(a: &PathBuf, b: &PathBuf) -> std::cmp::Ordering {
+        if a.is_dir() && b.is_file() {
+            std::cmp::Ordering::Less
+        } else if a.is_file() && b.is_dir() {
+            std::cmp::Ordering::Greater
+        } else {
+            a.file_name().cmp(&b.file_name())
+        }
+    }
+
     pub fn init(current_dir: &str, show_hidden_items: bool) -> ItemsBoxInit {
         ItemsBoxInit::new(current_dir.to_owned(), show_hidden_items)
     }
@@ -58,16 +68,21 @@ impl Hidden for PathBuf {
     #[cfg(windows)]
     fn is_hidden(&self) -> bool {
         use std::os::windows::prelude::*;
+        const FILE_ATTRIBUTE_HIDDEN: u32 = 0x00000002;
 
         match self.metadata() {
             Ok(metadata) => {
                 let attributes = metadata.file_attributes();
-                if (attributes & 0x2) {
-                    true
+                if attributes & FILE_ATTRIBUTE_HIDDEN != 0 {
+                    return true;
                 }
+
                 false
             }
-            Err(err) => println!("Error occured: [{:?}]", err.kind()),
+            Err(err) => {
+                println!("Error occured: [{:?}]", err.kind());
+                false
+            }
         }
     }
 }
@@ -97,7 +112,8 @@ impl AsyncComponent for ItemsBox {
             Err(error) => {
                 let _ = sender.output(Self::Output::Error(error.to_string()));
             }
-            Ok(items) => {
+            Ok(mut items) => {
+                items.sort_by(Self::sort_by_type);
                 item_box.update_items(&items);
                 let _ = sender.output(Self::Output::DirectoryLoaded(init.current_dir().to_owned()));
             }
@@ -131,8 +147,9 @@ impl AsyncComponent for ItemsBox {
                 Err(error) => {
                     let _ = sender.output(Self::Output::Error(error.to_string()));
                 }
-                Ok(items) => {
+                Ok(mut items) => {
                     self.set_current_dir(current_dir.to_owned());
+                    items.sort_by(Self::sort_by_type);
                     self.update_items(&items);
                     let _ = sender.output(Self::Output::DirectoryLoaded(current_dir.to_owned()));
                 }

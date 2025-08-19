@@ -73,7 +73,10 @@ impl Component for App {
         root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
-        let home_dir = env!("HOME");
+        let home_dir = option_env!("HOME")
+            .or_else(|| option_env!("USERPROFILE"))
+            .expect("Home directory not found");
+
         let parent_dir = parent(home_dir);
 
         let model = Self {
