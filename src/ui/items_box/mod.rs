@@ -129,7 +129,7 @@ impl AsyncComponent for ItemsBox {
 
     view! {
         gtk::ScrolledWindow {
-            set_hscrollbar_policy: gtk::PolicyType::Never,
+            set_hscrollbar_policy: gtk::PolicyType::Automatic,
             set_vexpand: true,
             item_box.items.widget(),
         }
