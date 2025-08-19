@@ -54,7 +54,7 @@ impl Component for App {
         gtk::ApplicationWindow {
             #[track = "model.changed(App::current_dir())"]
             set_title: Some(model.get_current_dir()),
-            set_width_request: 680,
+            set_width_request: 1240,
             set_height_request: 680,
             set_show_menubar: true,
 
