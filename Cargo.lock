@@ -127,7 +127,6 @@ dependencies = [
  "gtk4",
  "open",
  "relm4",
- "tokio",
  "tracker",
 ]
 

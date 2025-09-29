@@ -13,7 +13,7 @@ use relm4::{factory::FactoryVecDeque, prelude::*};
 
 use item::{Item, ItemOutput};
 
-use crate::core::load_items;
+use crate::core::{load_items, open_item};
 
 trait Hidden {
     fn is_hidden(&self) -> bool;
@@ -87,18 +87,18 @@ impl Hidden for PathBuf {
     }
 }
 
-#[relm4::component(pub, async)]
-impl AsyncComponent for ItemsBox {
+#[relm4::component(pub)]
+impl Component for ItemsBox {
     type Init = ItemsBoxInit;
     type Input = ItemsBoxInput;
     type Output = ItemsBoxOutput;
     type CommandOutput = ();
 
-    async fn init(
+    fn init(
         init: Self::Init,
         root: Self::Root,
-        sender: AsyncComponentSender<Self>,
-    ) -> AsyncComponentParts<Self> {
+        sender: ComponentSender<Self>,
+    ) -> ComponentParts<Self> {
         let mut item_box = Self {
             current_dir: init.current_dir().to_owned(),
             show_hidden_items: init.show_hidden_items(),
@@ -108,7 +108,7 @@ impl AsyncComponent for ItemsBox {
             tracker: 0,
         };
 
-        match load_items(init.current_dir()).await {
+        match load_items(init.current_dir()) {
             Err(error) => {
                 let _ = sender.output(Self::Output::Error(error.to_string()));
             }
@@ -121,7 +121,7 @@ impl AsyncComponent for ItemsBox {
 
         let widgets = view_output!();
 
-        AsyncComponentParts {
+        ComponentParts {
             model: item_box,
             widgets,
         }
@@ -135,15 +135,10 @@ impl AsyncComponent for ItemsBox {
         }
     }
 
-    async fn update(
-        &mut self,
-        message: Self::Input,
-        sender: AsyncComponentSender<Self>,
-        _: &Self::Root,
-    ) {
+    fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>, _: &Self::Root) {
         self.reset();
         match message {
-            Self::Input::LoadDirectory(current_dir) => match load_items(&current_dir).await {
+            Self::Input::LoadDirectory(current_dir) => match load_items(&current_dir) {
                 Err(error) => {
                     let _ = sender.output(Self::Output::Error(error.to_string()));
                 }
@@ -155,7 +150,7 @@ impl AsyncComponent for ItemsBox {
                 }
             },
             Self::Input::OpenFile(path) => {
-                if let Err(error) = open::that(&path) {
+                if let Err(error) = open_item(&path) {
                     let _ = sender.output(Self::Output::Error(error.to_string()));
                 }
             }
