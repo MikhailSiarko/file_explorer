@@ -9,8 +9,8 @@ edition = "2021"
 glib-build-tools = "0.21.0"
 
 [dependencies]
-gtk = { version = "0.9.7", package = "gtk4", features = ["v4_16"] }
-relm4 = { version = "0.9.1", features = ["libadwaita"] }
+gtk = { version = "0.10.0", package = "gtk4", features = ["v4_18"] }
+relm4 = { version = "0.10.0", features = ["libadwaita"] }
 open = "5.3.2"
 tracker = "0.2.2"
-anyhow = "1.0.99"
+anyhow = "1.0.100"
