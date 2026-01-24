@@ -36,7 +36,7 @@ pub struct App {
     #[tracker::do_not_track]
     top_panel: Controller<TopPanel>,
     #[tracker::do_not_track]
-    items_box: AsyncController<ItemsBox>,
+    items_box: Controller<ItemsBox>,
 }
 
 fn parent(path: &str) -> Option<String> {
