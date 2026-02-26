@@ -1,5 +1,5 @@
-use gtk::{gio::ActionEntry, prelude::*, Application};
 use relm4::ComponentSender;
+use relm4::gtk::{Application, gio::ActionEntry, prelude::*};
 
 use crate::{App, AppInput};
 

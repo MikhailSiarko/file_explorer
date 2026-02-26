@@ -1,10 +1,7 @@
 use anyhow::Result;
 use file_explorer::App;
-use gtk::{
-    gdk,
-    gio::{self},
-};
 use relm4::RelmApp;
+use relm4::gtk::{self, gdk, gio};
 
 fn initialize_custom_icons() -> Result<()> {
     gio::resources_register_include!("icons.gresource")?;

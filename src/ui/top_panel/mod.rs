@@ -2,10 +2,10 @@ pub mod init;
 mod input;
 mod output;
 
-use gtk::prelude::*;
 use init::TopPanelInit;
 pub(crate) use input::TopPanelInput;
 pub(crate) use output::TopPanelOutput;
+use relm4::gtk::prelude::*;
 use relm4::prelude::*;
 
 #[tracker::track]

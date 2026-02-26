@@ -6,7 +6,7 @@ mod ui;
 use menubar::setup_menubar;
 use relm4::{Component, ComponentController, ComponentParts, Controller};
 
-use gtk::prelude::*;
+use relm4::gtk::prelude::*;
 use relm4::prelude::*;
 use shortcuts::setup_shortcuts;
 

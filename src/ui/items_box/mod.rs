@@ -5,10 +5,10 @@ mod output;
 
 use std::path::PathBuf;
 
-use gtk::prelude::*;
 use init::ItemsBoxInit;
 pub(crate) use input::ItemsBoxInput;
 pub(crate) use output::ItemsBoxOutput;
+use relm4::gtk::prelude::*;
 use relm4::{factory::FactoryVecDeque, prelude::*};
 
 use item::{Item, ItemOutput};
