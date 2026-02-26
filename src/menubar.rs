@@ -1,4 +1,4 @@
-use gtk::{gio, prelude::*, Application};
+use relm4::gtk::{Application, gio, prelude::*};
 
 pub fn setup_menubar(app: &Application) {
     let menubar = {
